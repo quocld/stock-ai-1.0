@@ -108,24 +108,35 @@ export function StockChart({ symbol }: StockChartProps) {
 
   if (isLoading) {
     return (
-      <div className="w-full h-48 flex items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-lg">
+      <div className="w-full h-48 flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-lg p-4 space-y-2">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        <p className="text-sm text-gray-500 dark:text-gray-400">Loading stock data...</p>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="w-full h-48 flex items-center justify-center bg-red-50 dark:bg-red-900/20 rounded-lg text-red-600 dark:text-red-400 p-4 text-center">
-        <p>Error loading stock data: {error}</p>
+      <div className="w-full h-48 flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-lg p-4 space-y-2">
+        <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
+          Chart not available for {symbol}
+        </p>
       </div>
     )
   }
 
   if (stockData.length === 0) {
     return (
-      <div className="w-full h-48 flex items-center justify-center bg-yellow-50 dark:bg-yellow-900/20 rounded-lg text-yellow-600 dark:text-yellow-400 p-4 text-center">
-        <p>No data available for {symbol}</p>
+      <div className="w-full h-48 flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-lg p-4 space-y-2">
+        <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
+          No data available for {symbol}
+        </p>
       </div>
     )
   }
@@ -141,6 +152,11 @@ export function StockChart({ symbol }: StockChartProps) {
         borderWidth: 2,
         tension: 0.4,
         fill: true,
+        pointBackgroundColor: 'rgb(59, 130, 246)',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+        pointRadius: 4,
+        pointHoverRadius: 6,
       },
     ],
   }
@@ -155,6 +171,12 @@ export function StockChart({ symbol }: StockChartProps) {
       tooltip: {
         mode: 'index',
         intersect: false,
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        titleColor: '#fff',
+        bodyColor: '#fff',
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+        borderWidth: 1,
+        padding: 12,
         callbacks: {
           label: (context) => {
             return `$${context.parsed.y.toFixed(2)}`
@@ -171,13 +193,21 @@ export function StockChart({ symbol }: StockChartProps) {
           maxRotation: 0,
           autoSkip: true,
           maxTicksLimit: 5,
+          color: 'rgb(156, 163, 175)', // gray-400
+          font: {
+            size: 11,
+          }
         }
       },
       y: {
         grid: {
-          color: 'rgba(0, 0, 0, 0.1)',
+          color: 'rgba(0, 0, 0, 0.05)',
         },
         ticks: {
+          color: 'rgb(156, 163, 175)', // gray-400
+          font: {
+            size: 11,
+          },
           callback: (value) => `$${value}`
         }
       }
@@ -186,12 +216,26 @@ export function StockChart({ symbol }: StockChartProps) {
       mode: 'nearest',
       axis: 'x',
       intersect: false
+    },
+    animation: {
+      duration: 750,
+      easing: 'easeInOutQuart'
     }
   }
 
   return (
-    <div className="w-full h-48 bg-white dark:bg-gray-800 rounded-lg p-4">
-      <Line data={chartData} options={options} />
+    <div className="w-full h-48 bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          {symbol} Stock Price
+        </h3>
+        <span className="text-xs text-gray-500 dark:text-gray-400">
+          Last 7 days
+        </span>
+      </div>
+      <div className="h-36">
+        <Line data={chartData} options={options} />
+      </div>
     </div>
   )
 } 
