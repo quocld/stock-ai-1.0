@@ -27,33 +27,10 @@ export function ChatWindow({ sessionId, onSessionUpdate }: ChatWindowProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [streamingMessage, setStreamingMessage] = useState<string>('')
   const [isStreaming, setIsStreaming] = useState(false)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const chatContainerRef = useRef<HTMLDivElement>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
-  const streamingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const [lastUpdateTime, setLastUpdateTime] = useState(0)
-  const MIN_UPDATE_INTERVAL = 50 // Increased from 300ms to 500ms for slower typing
-  const scrollTimeoutRef = useRef<number | null>(null)
-  const isScrollingRef = useRef(false)
 
   // Add this constant for placeholder height
   const PLACEHOLDER_HEIGHT = '200px' // Adjust this value as needed
-
-  // Add constant for fixed width
-  const MESSAGE_WIDTH = 'min(calc(100% - 3rem), 48rem)' // 3rem for avatar space, 48rem max width
-
-  // Scroll to bottom when messages change
-  useEffect(() => {
-    if (messages.length > 0) {
-      const container = document.querySelector('.chat-container')
-      if (container) {
-        container.scrollTo({
-          top: container.scrollHeight,
-          behavior: 'smooth'
-        })
-      }
-    }
-  }, [messages])
 
   // Load messages from session when sessionId changes
   useEffect(() => {
@@ -72,17 +49,34 @@ export function ChatWindow({ sessionId, onSessionUpdate }: ChatWindowProps) {
 
   // Update session when messages change
   useEffect(() => {
+    console.log('Messages changed, current state:', {
+      sessionId,
+      messagesLength: messages.length,
+      messages
+    })
+    
     if (sessionId && messages.length > 0) {
       const session = chatStorage.getSession(sessionId)
+      console.log('Current session from storage:', session)
+      
       if (session) {
         const updatedSession = {
           ...session,
           messages,
           updatedAt: new Date()
         }
+        console.log('Updating session with:', updatedSession)
         chatStorage.updateSession(sessionId, updatedSession)
         onSessionUpdate(updatedSession)
+      } else {
+        console.warn('Session not found in storage:', sessionId)
       }
+    } else {
+      console.log('Skipping session update:', {
+        reason: !sessionId ? 'No sessionId' : 'Empty messages',
+        sessionId,
+        messagesLength: messages.length
+      })
     }
   }, [messages, sessionId, onSessionUpdate])
 
@@ -109,28 +103,37 @@ export function ChatWindow({ sessionId, onSessionUpdate }: ChatWindowProps) {
       timestamp: new Date(),
     }
 
-    if (sessionId) {
-      chatStorage.addMessage(sessionId, userMessage)
+    let currentSessionId = sessionId
+    if (!currentSessionId) {
+      try {
+        const newSession = chatStorage.createSession()
+        currentSessionId = newSession.id
+        // Notify parent about new session
+        onSessionUpdate(newSession)
+      } catch (error) {
+        console.error('Error creating new session:', error)
+        return // Don't proceed if we can't create a session
+      }
     }
+
+    if (currentSessionId) {
+      try {
+        chatStorage.addMessage(currentSessionId, userMessage)
+      } catch (error) {
+        console.error('Error adding user message:', error)
+      }
+    } else {
+      console.error('Failed to get valid sessionId')
+      return
+    }
+
     setMessages(prev => [...prev, userMessage])
     
-    // Scroll the latest message to the top
-    setTimeout(() => {
-      const container = document.querySelector('.chat-container')
-      if (container) {
-        container.scrollTo({
-          top: container.scrollHeight,
-          behavior: 'smooth'
-        })
-      }
-    }, 100)
-
     setIsLoading(true)
     setStreamingMessage('')
     setIsStreaming(true)
 
     try {
-      console.log('Sending request to server...')
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -154,17 +157,13 @@ export function ChatWindow({ sessionId, onSessionUpdate }: ChatWindowProps) {
         throw new Error('No response body')
       }
 
-      console.log('Server response received, starting to read stream...')
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
       let currentMessage = ''
 
       while (true) {
         const { done, value } = await reader.read()
-        if (done) {
-          console.log('Stream reading complete')
-          break
-        }
+        if (done) break
 
         const chunk = decoder.decode(value)
         const lines = chunk.split('\n')
@@ -175,7 +174,6 @@ export function ChatWindow({ sessionId, onSessionUpdate }: ChatWindowProps) {
           if (line.startsWith('data: ')) {
             const data = line.slice(6)
             if (data === '[DONE]') {
-              console.log('Stream complete')
               if (currentMessage) {
                 const assistantMessage: Message = {
                   id: Date.now().toString(),
@@ -183,8 +181,12 @@ export function ChatWindow({ sessionId, onSessionUpdate }: ChatWindowProps) {
                   role: 'assistant',
                   timestamp: new Date(),
                 }
-                if (sessionId) {
-                  chatStorage.addMessage(sessionId, assistantMessage)
+                if (currentSessionId) {
+                  try {
+                    chatStorage.addMessage(currentSessionId, assistantMessage)
+                  } catch (error) {
+                    console.error('Error adding assistant message:', error)
+                  }
                 }
                 setMessages(prev => [...prev, assistantMessage])
                 setStreamingMessage('')
@@ -199,14 +201,12 @@ export function ChatWindow({ sessionId, onSessionUpdate }: ChatWindowProps) {
                 throw new Error(parsed.error)
               }
               if (parsed.content) {
-                console.log('123123 [ChatWindow] Content chunk:', parsed.content)
                 currentMessage += parsed.content
                 updateStreamingMessage(currentMessage)
               }
             } catch (e) {
               console.error('Error parsing SSE data:', e)
               if (data.trim()) {
-                console.log('Treating as plain text:', data)
                 currentMessage += data
                 updateStreamingMessage(currentMessage)
               }
@@ -216,7 +216,6 @@ export function ChatWindow({ sessionId, onSessionUpdate }: ChatWindowProps) {
       }
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        console.log('Request was aborted')
         return
       }
 
@@ -229,8 +228,8 @@ export function ChatWindow({ sessionId, onSessionUpdate }: ChatWindowProps) {
         role: 'assistant',
         timestamp: new Date(),
       }
-      if (sessionId) {
-        chatStorage.addMessage(sessionId, errorMessage)
+      if (currentSessionId) {
+        chatStorage.addMessage(currentSessionId, errorMessage)
       }
       setMessages((prev) => [...prev, errorMessage])
       setIsStreaming(false)
@@ -238,14 +237,6 @@ export function ChatWindow({ sessionId, onSessionUpdate }: ChatWindowProps) {
       setIsLoading(false)
       abortControllerRef.current = null
     }
-  }
-
-  // Add these styles at the top of the component
-  const chatContainerStyles = {
-    scrollBehavior: 'smooth' as const,
-    overflowY: 'auto' as const,
-    height: '100%',
-    willChange: 'scroll-position' as const,
   }
 
   return (

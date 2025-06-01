@@ -31,11 +31,15 @@ export default function Home() {
   }, [])
 
   const handleNewChat = useCallback(() => {
-    const newSession = chatStorage.createSession()
-    setCurrentSessionId(newSession.id)
-    // Close sidebar on mobile after creating new chat
-    if (isMobile) {
-      setIsSidebarOpen(false)
+    try {
+      const newSession = chatStorage.createSession()
+      setCurrentSessionId(newSession.id)
+      // Close sidebar on mobile after creating new chat
+      if (isMobile) {
+        setIsSidebarOpen(false)
+      }
+    } catch (error) {
+      console.error('Error creating new chat:', error)
     }
   }, [isMobile])
 
@@ -67,13 +71,8 @@ export default function Home() {
   }, [])
 
   const handleToggleSidebar = useCallback(() => {
-    console.log('Toggle button clicked')
-    console.log('Current sidebar state:', isSidebarOpen)
-    setIsSidebarOpen(prev => {
-      console.log('Setting sidebar to:', !prev)
-      return !prev
-    })
-  }, [isSidebarOpen])
+    setIsSidebarOpen(prev => !prev)
+  }, [])
 
   // Add effect to monitor sidebar state
   useEffect(() => {

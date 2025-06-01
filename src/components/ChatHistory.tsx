@@ -78,7 +78,7 @@ export function ChatHistory({
       groups[group].push(session)
     })
 
-    return Object.entries(groups).filter(([_, sessions]) => sessions.length > 0)
+    return Object.entries(groups).filter(([, sessions]) => sessions.length > 0)
   }
 
   const handleNewChat = async () => {
@@ -89,7 +89,6 @@ export function ChatHistory({
       
       // Create new session and update state in one go
       const newSession = chatStorage.createSession()
-      console.log('Created new session:', newSession)
       
       // Update local state with the new session
       setSessions(prev => [newSession, ...prev])
@@ -136,7 +135,7 @@ export function ChatHistory({
     <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700">
       {/* New Chat Button */}
       <button
-        onClick={onNewChat}
+        onClick={handleNewChat}
         className="flex items-center w-full px-4 py-3 text-base text-gray-800 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
       >
         <svg 

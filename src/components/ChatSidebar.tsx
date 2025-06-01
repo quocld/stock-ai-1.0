@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { ChatHistory } from './ChatHistory'
-import { ChatSession } from './ChatHistory'
 
 interface ChatSidebarProps {
   currentSessionId: string | null

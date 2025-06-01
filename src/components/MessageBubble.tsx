@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react'
 import { Message } from './ChatWindow'
 import { StockChart } from './StockChart'
 import ReactMarkdown from 'react-markdown'
-import { Components } from 'react-markdown'
 
 interface MessageBubbleProps {
   message: Message

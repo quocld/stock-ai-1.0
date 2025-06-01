@@ -17,7 +17,7 @@ const steps: StepType[] = [
         </div>
         <p className="text-gray-600 leading-relaxed">
           Your intelligent AI tool for stock market research and analysis. 
-          Let's explore the key features of the application.
+          Let&apos;s explore the key features of the application.
         </p>
       </div>
     ),
@@ -97,7 +97,7 @@ const steps: StepType[] = [
           <div className="bg-gray-50 rounded-lg p-3 space-y-2">
             <div className="flex items-center gap-2">
               <span className="text-green-600">•</span>
-              <span className="text-gray-600">Ask about stock prices (e.g., "What's the current price of AAPL?")</span>
+              <span className="text-gray-600">Ask about stock prices (e.g., &quot;What&apos;s the current price of AAPL?&quot;)</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-green-600">•</span>
@@ -138,6 +138,9 @@ const steps: StepType[] = [
               <span className="text-gray-600">Request technical or fundamental analysis</span>
             </div>
           </div>
+          <p className="text-sm text-gray-500 italic">
+            * Due to using the free version, there may be limitations on speed and accuracy
+          </p>
         </div>
       </div>
     ),

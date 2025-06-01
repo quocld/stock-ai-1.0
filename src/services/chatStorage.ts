@@ -16,14 +16,17 @@ export interface ChatStorageService {
 }
 
 class LocalStorageChatService implements ChatStorageService {
-  private parseSession(session: any): ChatSession {
+  private parseSession(session: Record<string, unknown>): ChatSession {
     return {
-      ...session,
-      createdAt: new Date(session.createdAt),
-      updatedAt: new Date(session.updatedAt),
-      messages: (session.messages || []).map((msg: any) => ({
-        ...msg,
-        timestamp: new Date(msg.timestamp)
+      id: session.id as string,
+      title: session.title as string,
+      createdAt: new Date(session.createdAt as string),
+      updatedAt: new Date(session.updatedAt as string),
+      messages: ((session.messages || []) as Array<Record<string, unknown>>).map((msg) => ({
+        id: msg.id as string,
+        content: msg.content as string,
+        role: msg.role as 'user' | 'assistant',
+        timestamp: new Date(msg.timestamp as string)
       }))
     }
   }
@@ -36,14 +39,14 @@ class LocalStorageChatService implements ChatStorageService {
       const parsedSessions = JSON.parse(stored)
       if (!Array.isArray(parsedSessions)) {
         console.error('Invalid stored sessions format')
-        localStorage.removeItem(STORAGE_KEY) // Clear invalid data
+        localStorage.removeItem(STORAGE_KEY)
         return []
       }
 
       return parsedSessions.map(session => this.parseSession(session))
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error reading chat sessions from localStorage:', error)
-      localStorage.removeItem(STORAGE_KEY) // Clear corrupted data
+      localStorage.removeItem(STORAGE_KEY)
       return []
     }
   }
@@ -61,7 +64,7 @@ class LocalStorageChatService implements ChatStorageService {
       }))
 
       localStorage.setItem(STORAGE_KEY, JSON.stringify(sessionsToStore))
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error saving chat sessions to localStorage:', error)
     }
   }
@@ -91,12 +94,11 @@ class LocalStorageChatService implements ChatStorageService {
         updatedAt: new Date(timestamp)
       }
 
-      // Add new session and save
       const updatedSessions = [newSession, ...sessions]
       this.saveSessions(updatedSessions)
       
       return newSession
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error creating new session:', error)
       throw error
     }
@@ -135,35 +137,36 @@ class LocalStorageChatService implements ChatStorageService {
   }
 
   addMessage(sessionId: string, message: Message): void {
-    const sessions = this.getStoredSessions()
-    const sessionIndex = sessions.findIndex(s => s.id === sessionId)
-    
-    if (sessionIndex === -1) {
-      console.error('Session not found:', sessionId)
-      return
+    try {
+      const sessions = this.getStoredSessions()
+      const sessionIndex = sessions.findIndex(s => s.id === sessionId)
+      
+      if (sessionIndex === -1) {
+        console.error('Session not found:', sessionId)
+        return
+      }
+
+      const session = sessions[sessionIndex]
+      const updatedMessages = [...session.messages, message]
+
+      let title = session.title
+      if (session.title === 'New Chat' && message.role === 'user') {
+        title = message.content.slice(0, 30) + (message.content.length > 30 ? '...' : '')
+      }
+
+      const updatedSession = {
+        ...session,
+        messages: updatedMessages,
+        title,
+        updatedAt: new Date()
+      }
+
+      sessions[sessionIndex] = updatedSession
+      this.saveSessions(sessions)
+      this.removeEmptySessions()
+    } catch (error: unknown) {
+      console.error('Error adding message:', error)
     }
-
-    const session = sessions[sessionIndex]
-    const updatedMessages = [...session.messages, message]
-
-    // Update title if this is the first user message
-    let title = session.title
-    if (session.title === 'New Chat' && message.role === 'user') {
-      title = message.content.slice(0, 30) + (message.content.length > 30 ? '...' : '')
-    }
-
-    const updatedSession = {
-      ...session,
-      messages: updatedMessages,
-      title,
-      updatedAt: new Date()
-    }
-
-    sessions[sessionIndex] = updatedSession
-    this.saveSessions(sessions)
-
-    // Clean up any empty sessions after adding message
-    this.removeEmptySessions()
   }
 
   updateSessionTitle(sessionId: string, title: string): void {

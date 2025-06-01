@@ -1,9 +1,8 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import type { ChatSession } from './ChatHistory'
 import { ChatWindow } from './ChatWindow'
 import { Header } from './Header'
-import { ChatSession } from './ChatHistory'
 
 interface ChatLayoutProps {
   sessionId: string | null
