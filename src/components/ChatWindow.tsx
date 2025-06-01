@@ -263,7 +263,7 @@ export function ChatWindow({ sessionId, onSessionUpdate }: ChatWindowProps) {
       {/* Input Area - Floating Container */}
       <div className="sticky bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white to-transparent dark:from-gray-900 dark:via-gray-900 pt-4 pb-6">
         <div className="max-w-3xl mx-auto px-4 md:px-6">
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-lg">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-200 dark:border-gray-700 shadow-lg">
             <ChatInput
               onSendMessage={handleSendMessage}
               isLoading={isLoading}

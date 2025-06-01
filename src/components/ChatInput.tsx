@@ -42,7 +42,7 @@ export function ChatInput({ onSendMessage, isLoading, onCancel }: ChatInputProps
 
   return (
     <form onSubmit={handleSubmit} className="relative">
-      <div className="relative flex items-center">
+      <div className="relative flex items-center rounded-3xl bg-white/50 dark:bg-gray-800/50 border-[0.5px] border-gray-400 dark:border-gray-700/40">
         <textarea
           ref={textareaRef}
           value={message}
@@ -50,14 +50,18 @@ export function ChatInput({ onSendMessage, isLoading, onCancel }: ChatInputProps
           onKeyDown={handleKeyDown}
           placeholder="Type a message..."
           disabled={isLoading}
-          rows={1}
+          rows={3}
           className={`
-            w-full resize-none rounded-lg
-            bg-transparent text-gray-900 dark:text-gray-100
-            px-4 py-3 pr-24 focus:outline-none
+            w-full resize-none rounded-3xl
+            bg-transparent
+            text-gray-900 dark:text-gray-100
+            px-6 py-3 pr-24
+            focus:outline-none
             disabled:opacity-50 disabled:cursor-not-allowed
-            min-h-[44px] max-h-[200px]
-            placeholder-gray-500 dark:placeholder-gray-400
+            min-h-[56px] max-h-[200px]
+            placeholder-gray-400 dark:placeholder-gray-500
+            text-base font-medium
+            transition-colors duration-200
           `}
         />
         <div className="absolute right-2 flex items-center gap-2">
@@ -65,7 +69,7 @@ export function ChatInput({ onSendMessage, isLoading, onCancel }: ChatInputProps
             <button
               type="button"
               onClick={onCancel}
-              className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-2xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               aria-label="Cancel"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -77,9 +81,9 @@ export function ChatInput({ onSendMessage, isLoading, onCancel }: ChatInputProps
               type="submit"
               disabled={!message.trim() || isLoading}
               className={`
-                p-2 rounded-lg transition-colors
+                p-2 rounded-2xl transition-colors
                 ${message.trim() && !isLoading
-                  ? 'text-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-900/20'
+                  ? 'text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-900/20'
                   : 'text-gray-400 dark:text-gray-500 cursor-not-allowed'
                 }
               `}

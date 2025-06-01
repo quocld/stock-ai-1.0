@@ -90,7 +90,7 @@ export function Header({ onToggleSidebar, isSidebarOpen, onNewChat }: HeaderProp
             </svg>
           </button>
           {/* Info Tooltip */}
-          <div className="absolute right-0 -bottom-12 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+          <div className="absolute right-0 -bottom-16 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
             <div className="space-y-1">
               <div className="flex items-center gap-1">
                 <span className="text-blue-400">AI:</span>
@@ -99,6 +99,10 @@ export function Header({ onToggleSidebar, isSidebarOpen, onNewChat }: HeaderProp
               <div className="flex items-center gap-1">
                 <span className="text-blue-400">Data:</span>
                 <span>Yahoo Finance</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="text-blue-400">Author:</span>
+                <span>Quoc Le</span>
               </div>
             </div>
           </div>
