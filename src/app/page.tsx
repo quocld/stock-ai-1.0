@@ -1,129 +1,111 @@
 'use client'
 
-import { useState, useCallback } from 'react'
-import { ChatWindow } from '@/components/ChatWindow'
-import { ChatHistory, ChatSession } from '@/components/ChatHistory'
+import { useState, useCallback, useEffect } from 'react'
+import { ChatLayout } from '@/components/ChatLayout'
+import { ChatSidebar } from '@/components/ChatSidebar'
+import { ChatSession } from '@/components/ChatHistory'
+import { chatStorage } from '@/services/chatStorage'
 
 export default function Home() {
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+  const [isMobile, setIsMobile] = useState(false)
 
-  const handleNewChat = useCallback(() => {
-    const newSession: ChatSession = {
-      id: Date.now().toString(),
-      title: 'New Chat',
-      messages: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
+  // Handle responsive behavior
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768
+      setIsMobile(mobile)
+      // Always show sidebar on desktop
+      if (!mobile) {
+        setIsSidebarOpen(true)
+      }
     }
 
-    // Add new session to localStorage
-    const storedSessions = localStorage.getItem('chatSessions')
-    const sessions = storedSessions ? JSON.parse(storedSessions) : []
-    sessions.unshift(newSession)
-    localStorage.setItem('chatSessions', JSON.stringify(sessions))
+    // Initial check
+    checkMobile()
 
-    // Switch to new session
-    setCurrentSessionId(newSession.id)
+    // Add resize listener
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
   }, [])
+
+  const handleNewChat = useCallback(() => {
+    const newSession = chatStorage.createSession()
+    setCurrentSessionId(newSession.id)
+    // Close sidebar on mobile after creating new chat
+    if (isMobile) {
+      setIsSidebarOpen(false)
+    }
+  }, [isMobile])
 
   const handleSelectSession = useCallback((sessionId: string) => {
     setCurrentSessionId(sessionId)
-  }, [])
+    // Close sidebar on mobile after selecting a session
+    if (isMobile) {
+      setIsSidebarOpen(false)
+    }
+  }, [isMobile])
 
   const handleDeleteSession = useCallback((sessionId: string) => {
-    const storedSessions = localStorage.getItem('chatSessions')
-    if (storedSessions) {
-      const sessions = JSON.parse(storedSessions)
-      const updatedSessions = sessions.filter((s: ChatSession) => s.id !== sessionId)
-      localStorage.setItem('chatSessions', JSON.stringify(updatedSessions))
-
-      // If deleted session was current, switch to first available session or null
-      if (sessionId === currentSessionId) {
-        setCurrentSessionId(updatedSessions.length > 0 ? updatedSessions[0].id : null)
-      }
+    chatStorage.deleteSession(sessionId)
+    if (sessionId === currentSessionId) {
+      const sessions = chatStorage.getAllSessions()
+      setCurrentSessionId(sessions.length > 0 ? sessions[0].id : null)
     }
   }, [currentSessionId])
 
   const handleClearAll = useCallback(() => {
     if (window.confirm('Are you sure you want to delete all chat sessions? This cannot be undone.')) {
-      localStorage.removeItem('chatSessions')
+      chatStorage.clearAllSessions()
       setCurrentSessionId(null)
     }
   }, [])
 
   const handleSessionUpdate = useCallback((updatedSession: ChatSession) => {
-    const storedSessions = localStorage.getItem('chatSessions')
-    if (storedSessions) {
-      const sessions = JSON.parse(storedSessions)
-      const sessionIndex = sessions.findIndex((s: ChatSession) => s.id === updatedSession.id)
-      if (sessionIndex !== -1) {
-        sessions[sessionIndex] = updatedSession
-        localStorage.setItem('chatSessions', JSON.stringify(sessions))
-      }
-    }
+    chatStorage.updateSession(updatedSession.id, updatedSession)
   }, [])
 
+  const handleToggleSidebar = useCallback(() => {
+    console.log('Toggle button clicked')
+    console.log('Current sidebar state:', isSidebarOpen)
+    setIsSidebarOpen(prev => {
+      console.log('Setting sidebar to:', !prev)
+      return !prev
+    })
+  }, [isSidebarOpen])
+
+  // Add effect to monitor sidebar state
+  useEffect(() => {
+    console.log('Sidebar state changed to:', isSidebarOpen)
+  }, [isSidebarOpen])
+
   return (
-    <div className="flex flex-col h-screen">
-      {/* Header */}
-      <header className="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-          <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-          </svg>
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">AI Chat Assistant</h1>
-        </div>
-        <div className="flex items-center space-x-4">
-          <button
-            onClick={handleNewChat}
-            className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-          </button>
-        </div>
-      </header>
+    <div className="relative h-screen bg-white dark:bg-gray-900 overflow-hidden">
+      {/* Chat Sidebar */}
+      <ChatSidebar
+        currentSessionId={currentSessionId}
+        onSelectSession={handleSelectSession}
+        onNewChat={handleNewChat}
+        onDeleteSession={handleDeleteSession}
+        onClearAll={handleClearAll}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+      />
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-hidden flex">
-        {/* Sidebar */}
-        <div className={`
-          ${isSidebarOpen ? 'w-64' : 'w-0'}
-          transition-all duration-300 ease-in-out
-          overflow-hidden
-        `}>
-          <ChatHistory
-            currentSessionId={currentSessionId}
-            onSelectSession={handleSelectSession}
-            onNewChat={handleNewChat}
-            onDeleteSession={handleDeleteSession}
-            onClearAll={handleClearAll}
-          />
-        </div>
-
-        {/* Chat Window */}
-        <div className="flex-1">
-          <ChatWindow
-            sessionId={currentSessionId}
-            onSessionUpdate={handleSessionUpdate}
-          />
-        </div>
-      </main>
-
-      {/* Footer */}
-      <footer className="py-2 px-4 text-center text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-        <p>Developed by Le Quoc</p>
-      </footer>
+      {/* Main Chat Area */}
+      <div className={`
+        absolute inset-0 transition-all duration-300 ease-in-out
+        ${isSidebarOpen ? 'md:left-64' : 'left-0'}
+      `}>
+        <ChatLayout
+          sessionId={currentSessionId}
+          onSessionUpdate={handleSessionUpdate}
+          isSidebarOpen={isSidebarOpen}
+          onToggleSidebar={handleToggleSidebar}
+          onNewChat={handleNewChat}
+        />
+      </div>
     </div>
   )
 }

@@ -3,13 +3,12 @@
 import { useState, useRef, useEffect } from 'react'
 
 interface ChatInputProps {
-  onSendMessage: (message: string) => void
-  disabled?: boolean
-  onCancel?: () => void
-  isStreaming?: boolean
+  onSendMessage: (content: string) => void
+  isLoading: boolean
+  onCancel: () => void
 }
 
-export function ChatInput({ onSendMessage, disabled, onCancel, isStreaming }: ChatInputProps) {
+export function ChatInput({ onSendMessage, isLoading, onCancel }: ChatInputProps) {
   const [message, setMessage] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -24,14 +23,12 @@ export function ChatInput({ onSendMessage, disabled, onCancel, isStreaming }: Ch
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (message.trim() && !disabled) {
+    if (message.trim() && !isLoading) {
       onSendMessage(message.trim())
       setMessage('')
       // Reset textarea height
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto'
-        // Focus back to textarea after sending
-        setTimeout(() => textareaRef.current?.focus(), 0)
       }
     }
   }
@@ -44,41 +41,56 @@ export function ChatInput({ onSendMessage, disabled, onCancel, isStreaming }: Ch
   }
 
   return (
-    <form onSubmit={handleSubmit} className="relative max-w-3xl mx-auto">
+    <form onSubmit={handleSubmit} className="relative">
       <div className="relative flex items-center">
         <textarea
           ref={textareaRef}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Type your message..."
-          disabled={disabled}
-          className="flex-1 resize-none rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 disabled:opacity-50 disabled:cursor-not-allowed min-h-[36px] max-h-[120px] text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
-          style={{ overflow: 'hidden' }}
+          placeholder="Type a message..."
+          disabled={isLoading}
+          rows={1}
+          className={`
+            w-full resize-none rounded-lg
+            bg-transparent text-gray-900 dark:text-gray-100
+            px-4 py-3 pr-24 focus:outline-none
+            disabled:opacity-50 disabled:cursor-not-allowed
+            min-h-[44px] max-h-[200px]
+            placeholder-gray-500 dark:placeholder-gray-400
+          `}
         />
-        {isStreaming ? (
-          <button
-            type="button"
-            onClick={onCancel}
-            className="absolute right-1.5 p-1.5 text-gray-500 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400 transition-colors"
-            title="Stop generating"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <rect x="6" y="6" width="12" height="12" rx="2" />
-            </svg>
-          </button>
-        ) : (
-          <button
-            type="submit"
-            disabled={!message.trim() || disabled}
-            className="absolute right-1.5 p-1.5 text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            title="Send message"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-            </svg>
-          </button>
-        )}
+        <div className="absolute right-2 flex items-center gap-2">
+          {isLoading ? (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              aria-label="Cancel"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          ) : (
+            <button
+              type="submit"
+              disabled={!message.trim() || isLoading}
+              className={`
+                p-2 rounded-lg transition-colors
+                ${message.trim() && !isLoading
+                  ? 'text-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-900/20'
+                  : 'text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                }
+              `}
+              aria-label="Send message"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
     </form>
   )

@@ -207,69 +207,77 @@ export function ChatWindow({ sessionId, onSessionUpdate }: ChatWindowProps) {
   }
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-gray-800">
+    <div className="flex flex-col h-full bg-white dark:bg-gray-900">
+      {/* Messages Container */}
       <div className="flex-1 overflow-y-auto">
         <div 
           ref={chatContainerRef}
-          className="max-w-3xl mx-auto px-4 py-4 space-y-4 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600"
+          className="max-w-3xl mx-auto px-4 py-6 space-y-4 md:px-6"
         >
           {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-[calc(100vh-12rem)] text-gray-500 dark:text-gray-400 space-y-4">
-              <svg className="w-16 h-16 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-              </svg>
-              <h2 className="text-xl font-semibold">Welcome to AI Chat Assistant</h2>
-              <p className="text-center max-w-md">
-                I'm your AI assistant. I can help you with various tasks, including analyzing stock data.
-                Try asking me about stock prices or any other questions!
-              </p>
+            <div className="flex items-center justify-center h-[calc(100vh-12rem)] text-gray-500 dark:text-gray-400">
+              <div className="text-center">
+                <svg
+                  className="w-12 h-12 mx-auto mb-4 text-gray-400 dark:text-gray-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                  />
+                </svg>
+                <p className="text-lg font-medium">Start a new conversation</p>
+                <p className="text-sm mt-1">Type a message below to begin</p>
+              </div>
             </div>
           ) : (
             <>
               {messages.map((message) => (
-                <MessageBubble 
-                  key={message.id} 
-                  message={message} 
-                  isError={message.role === 'assistant' && message.content.startsWith('Error:')}
+                <MessageBubble
+                  key={message.id}
+                  message={message}
+                  isLoading={false}
                 />
               ))}
               {streamingMessage && (
                 <MessageBubble
-                  key="streaming"
                   message={{
                     id: 'streaming',
                     content: streamingMessage,
                     role: 'assistant',
                     timestamp: new Date(),
                   }}
-                  isStreaming={true}
+                  isLoading={true}
                 />
               )}
+              <div ref={messagesEndRef} />
             </>
           )}
-          {isLoading && !streamingMessage && (
-            <div className="flex justify-start items-start">
-              <div className="max-w-[85%]">
-                <div className="bg-gray-100 dark:bg-gray-700/50 rounded-2xl px-3 py-1.5">
-                  <div className="flex space-x-1.5">
-                    <div className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <div className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <div className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
         </div>
       </div>
-      <div className="border-t border-gray-200 dark:border-gray-700 p-3 bg-gray-50 dark:bg-gray-900">
-        <ChatInput 
-          onSendMessage={handleSendMessage} 
-          disabled={isLoading} 
-          onCancel={() => abortControllerRef.current?.abort()}
-          isStreaming={!!streamingMessage}
-        />
+
+      {/* Input Area - Floating Container */}
+      <div className="sticky bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white to-transparent dark:from-gray-900 dark:via-gray-900 pt-4 pb-6">
+        <div className="max-w-3xl mx-auto px-4 md:px-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-lg">
+            <ChatInput
+              onSendMessage={handleSendMessage}
+              isLoading={isLoading}
+              onCancel={() => {
+                if (abortControllerRef.current) {
+                  abortControllerRef.current.abort()
+                  abortControllerRef.current = null
+                }
+                setIsLoading(false)
+                setStreamingMessage('')
+              }}
+            />
+          </div>
+        </div>
       </div>
     </div>
   )
