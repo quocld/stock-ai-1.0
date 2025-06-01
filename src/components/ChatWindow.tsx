@@ -5,6 +5,10 @@ import { MessageBubble } from './MessageBubble'
 import { ChatInput } from './ChatInput'
 import { ChatSession } from './ChatHistory'
 import { chatStorage } from '@/services/chatStorage'
+import ReactMarkdown from 'react-markdown'
+
+// Regular expression to match stock symbols (1-5 uppercase letters)
+const STOCK_SYMBOL_REGEX = /\$([A-Z]{1,5})\b/g
 
 export type Message = {
   id: string
@@ -22,9 +26,34 @@ export function ChatWindow({ sessionId, onSessionUpdate }: ChatWindowProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [streamingMessage, setStreamingMessage] = useState<string>('')
+  const [isStreaming, setIsStreaming] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
+  const streamingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [lastUpdateTime, setLastUpdateTime] = useState(0)
+  const MIN_UPDATE_INTERVAL = 50 // Increased from 300ms to 500ms for slower typing
+  const scrollTimeoutRef = useRef<number | null>(null)
+  const isScrollingRef = useRef(false)
+
+  // Add this constant for placeholder height
+  const PLACEHOLDER_HEIGHT = '200px' // Adjust this value as needed
+
+  // Add constant for fixed width
+  const MESSAGE_WIDTH = 'min(calc(100% - 3rem), 48rem)' // 3rem for avatar space, 48rem max width
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    if (messages.length > 0) {
+      const container = document.querySelector('.chat-container')
+      if (container) {
+        container.scrollTo({
+          top: container.scrollHeight,
+          behavior: 'smooth'
+        })
+      }
+    }
+  }, [messages])
 
   // Load messages from session when sessionId changes
   useEffect(() => {
@@ -57,24 +86,11 @@ export function ChatWindow({ sessionId, onSessionUpdate }: ChatWindowProps) {
     }
   }, [messages, sessionId, onSessionUpdate])
 
-  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior })
-    }
+  // Add back the updateStreamingMessage function
+  const updateStreamingMessage = (content: string) => {
+    console.log('123123 [ChatWindow] updateStreamingMessage called with content:', content)
+    setStreamingMessage(content)
   }
-
-  // Scroll to bottom when messages change
-  useEffect(() => {
-    scrollToBottom()
-  }, [messages, streamingMessage])
-
-  // Scroll to bottom when loading state changes (for charts)
-  useEffect(() => {
-    if (!isLoading) {
-      // Use setTimeout to ensure the chart has rendered
-      setTimeout(() => scrollToBottom(), 100)
-    }
-  }, [isLoading])
 
   const handleSendMessage = async (content: string) => {
     // Cancel any ongoing streaming
@@ -96,12 +112,25 @@ export function ChatWindow({ sessionId, onSessionUpdate }: ChatWindowProps) {
     if (sessionId) {
       chatStorage.addMessage(sessionId, userMessage)
     }
-    setMessages((prev) => [...prev, userMessage])
+    setMessages(prev => [...prev, userMessage])
+    
+    // Scroll the latest message to the top
+    setTimeout(() => {
+      const container = document.querySelector('.chat-container')
+      if (container) {
+        container.scrollTo({
+          top: container.scrollHeight,
+          behavior: 'smooth'
+        })
+      }
+    }, 100)
+
     setIsLoading(true)
     setStreamingMessage('')
+    setIsStreaming(true)
 
     try {
-      // Send all messages to maintain context
+      console.log('Sending request to server...')
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -125,17 +154,19 @@ export function ChatWindow({ sessionId, onSessionUpdate }: ChatWindowProps) {
         throw new Error('No response body')
       }
 
-      // Handle SSE response
+      console.log('Server response received, starting to read stream...')
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
       let currentMessage = ''
 
       while (true) {
         const { done, value } = await reader.read()
-        if (done) break
+        if (done) {
+          console.log('Stream reading complete')
+          break
+        }
 
         const chunk = decoder.decode(value)
-        // Each chunk might contain multiple lines
         const lines = chunk.split('\n')
         
         for (const line of lines) {
@@ -144,7 +175,7 @@ export function ChatWindow({ sessionId, onSessionUpdate }: ChatWindowProps) {
           if (line.startsWith('data: ')) {
             const data = line.slice(6)
             if (data === '[DONE]') {
-              // Add the complete message to messages array
+              console.log('Stream complete')
               if (currentMessage) {
                 const assistantMessage: Message = {
                   id: Date.now().toString(),
@@ -155,8 +186,9 @@ export function ChatWindow({ sessionId, onSessionUpdate }: ChatWindowProps) {
                 if (sessionId) {
                   chatStorage.addMessage(sessionId, assistantMessage)
                 }
-                setMessages((prev) => [...prev, assistantMessage])
+                setMessages(prev => [...prev, assistantMessage])
                 setStreamingMessage('')
+                setIsStreaming(false)
               }
               return
             }
@@ -167,15 +199,16 @@ export function ChatWindow({ sessionId, onSessionUpdate }: ChatWindowProps) {
                 throw new Error(parsed.error)
               }
               if (parsed.content) {
+                console.log('123123 [ChatWindow] Content chunk:', parsed.content)
                 currentMessage += parsed.content
-                setStreamingMessage(currentMessage)
+                updateStreamingMessage(currentMessage)
               }
             } catch (e) {
-              console.error('Error parsing SSE data:', e, 'Line:', line)
-              // If it's not JSON, treat it as plain text
+              console.error('Error parsing SSE data:', e)
               if (data.trim()) {
+                console.log('Treating as plain text:', data)
                 currentMessage += data
-                setStreamingMessage(currentMessage)
+                updateStreamingMessage(currentMessage)
               }
             }
           }
@@ -200,20 +233,25 @@ export function ChatWindow({ sessionId, onSessionUpdate }: ChatWindowProps) {
         chatStorage.addMessage(sessionId, errorMessage)
       }
       setMessages((prev) => [...prev, errorMessage])
+      setIsStreaming(false)
     } finally {
       setIsLoading(false)
       abortControllerRef.current = null
     }
   }
 
+  // Add these styles at the top of the component
+  const chatContainerStyles = {
+    scrollBehavior: 'smooth' as const,
+    overflowY: 'auto' as const,
+    height: '100%',
+    willChange: 'scroll-position' as const,
+  }
+
   return (
     <div className="flex flex-col h-full bg-white dark:bg-gray-900">
-      {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto">
-        <div 
-          ref={chatContainerRef}
-          className="max-w-3xl mx-auto px-4 py-6 space-y-4 md:px-6"
-        >
+      <div className="flex-1 overflow-y-auto chat-container">
+        <div className="max-w-3xl mx-auto px-4 py-6 space-y-4 md:px-6 pb-[50vh]">
           {messages.length === 0 ? (
             <div className="flex items-center justify-center h-[calc(100vh-12rem)] text-gray-500 dark:text-gray-400">
               <div className="text-center">
@@ -237,24 +275,61 @@ export function ChatWindow({ sessionId, onSessionUpdate }: ChatWindowProps) {
           ) : (
             <>
               {messages.map((message) => (
-                <MessageBubble
-                  key={message.id}
-                  message={message}
-                  isLoading={false}
-                />
+                <div key={message.id} data-message-id={message.id}>
+                  <MessageBubble
+                    message={message}
+                    isLoading={false}
+                  />
+                </div>
               ))}
-              {streamingMessage && (
-                <MessageBubble
-                  message={{
-                    id: 'streaming',
-                    content: streamingMessage,
-                    role: 'assistant',
-                    timestamp: new Date(),
+              {isStreaming && (
+                <div 
+                  className="flex items-start"
+                  style={{ 
+                    minHeight: PLACEHOLDER_HEIGHT,
                   }}
-                  isLoading={true}
-                />
+                >
+                  <div className="flex-1 max-w-[85%] md:max-w-[75%]">
+                    <div className="rounded-3xl px-4 py-2.5 break-words text-gray-900 dark:text-gray-100">
+                      {streamingMessage ? (
+                        <div className="prose dark:prose-invert max-w-none prose-sm">
+                          <ReactMarkdown
+                            components={{
+                              text: ({ children }) => {
+                                const text = children as string
+                                return (
+                                  <>
+                                    {text.split(STOCK_SYMBOL_REGEX).map((part, index) => {
+                                      if (index % 2 === 1) {
+                                        return (
+                                          <span 
+                                            key={index} 
+                                            className="font-mono bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded text-xs"
+                                          >
+                                            ${part}
+                                          </span>
+                                        )
+                                      }
+                                      return part
+                                    })}
+                                  </>
+                                )
+                              }
+                            }}
+                          >
+                            {streamingMessage}
+                          </ReactMarkdown>
+                        </div>
+                      ) : (
+                        <div 
+                          className="h-6 rounded animate-pulse bg-gray-200 dark:bg-gray-700"
+                          style={{ width: '100%' }}
+                        />
+                      )}
+                    </div>
+                  </div>
+                </div>
               )}
-              <div ref={messagesEndRef} />
             </>
           )}
         </div>

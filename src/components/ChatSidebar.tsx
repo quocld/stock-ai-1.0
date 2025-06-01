@@ -108,8 +108,12 @@ export function ChatSidebar({
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
-              {/* Tooltip */}
-              <div className="absolute left-1/2 -translate-x-1/2 -bottom-8 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+              {/* Desktop Tooltip */}
+              <div className="absolute left-1/2 -translate-x-1/2 -bottom-8 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 hidden md:block">
+                Close Sidebar
+              </div>
+              {/* Mobile Tooltip */}
+              <div className="absolute left-1/2 -translate-x-1/2 -bottom-8 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap z-50 md:hidden">
                 Close Sidebar
               </div>
             </button>
@@ -131,7 +135,7 @@ export function ChatSidebar({
       {/* Mobile Overlay */}
       {isMobile && isOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden transition-opacity duration-300"
+          className="fixed inset-0 bg-black opacity-50 z-30 md:hidden transition-opacity duration-300"
           onClick={onClose}
         />
       )}

@@ -161,6 +161,13 @@ export function StockChart({ symbol }: StockChartProps) {
     ],
   }
 
+  // Calculate price changes
+  const firstPrice = stockData[0].close
+  const lastPrice = stockData[stockData.length - 1].close
+  const priceChange = lastPrice - firstPrice
+  const percentChange = (priceChange / firstPrice) * 100
+  const isPositive = priceChange >= 0
+
   const options: ChartOptions<'line'> = {
     responsive: true,
     maintainAspectRatio: false,
@@ -179,7 +186,21 @@ export function StockChart({ symbol }: StockChartProps) {
         padding: 12,
         callbacks: {
           label: (context) => {
-            return `$${context.parsed.y.toFixed(2)}`
+            const value = context.parsed.y
+            // Format large numbers with commas and round to 2 decimal places
+            const formattedValue = value >= 1000 
+              ? value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+              : value.toFixed(2)
+            return `$${formattedValue}`
+          },
+          title: (context) => {
+            const date = new Date(context[0].label)
+            return date.toLocaleDateString('en-US', { 
+              weekday: 'short',
+              month: 'short', 
+              day: 'numeric',
+              year: 'numeric'
+            })
           }
         }
       }
@@ -208,7 +229,13 @@ export function StockChart({ symbol }: StockChartProps) {
           font: {
             size: 11,
           },
-          callback: (value) => `$${value}`
+          callback: (value) => {
+            // Format large numbers with commas and round to 2 decimal places
+            const numValue = Number(value)
+            return numValue >= 1000 
+              ? `$${numValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+              : `$${numValue.toFixed(2)}`
+          }
         }
       }
     },
@@ -224,17 +251,77 @@ export function StockChart({ symbol }: StockChartProps) {
   }
 
   return (
-    <div className="w-full h-48 bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-100 dark:border-gray-700">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          {symbol} Stock Price
-        </h3>
-        <span className="text-xs text-gray-500 dark:text-gray-400">
-          Last 7 days
-        </span>
+    <div className="w-full bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2 sm:mb-4 gap-1 sm:gap-0">
+        <div>
+          <h3 className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
+            {symbol} Stock Price
+          </h3>
+          <div className="flex items-center gap-1 sm:gap-2 mt-0.5 sm:mt-1">
+            <span className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
+              ${lastPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+            <span className={`text-xs sm:text-sm font-medium ${isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+              {isPositive ? '↑' : '↓'} {Math.abs(priceChange).toFixed(2)} ({Math.abs(percentChange).toFixed(2)}%)
+            </span>
+          </div>
+        </div>
+        <div className="text-right">
+          <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
+            Last 7 days
+          </span>
+          <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5 sm:mt-1">
+            {new Date(stockData[0].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(stockData[stockData.length - 1].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          </div>
+        </div>
       </div>
-      <div className="h-36">
-        <Line data={chartData} options={options} />
+      <div className="h-36 sm:h-40 md:h-48 -mx-2 sm:mx-0">
+        <Line data={chartData} options={{
+          ...options,
+          scales: {
+            x: {
+              ...(options.scales?.x || {}),
+              ticks: {
+                ...(options.scales?.x?.ticks || {}),
+                maxTicksLimit: window.innerWidth < 640 ? 4 : window.innerWidth < 1024 ? 5 : 7,
+                font: {
+                  size: window.innerWidth < 640 ? 10 : 11,
+                }
+              }
+            },
+            y: {
+              ...(options.scales?.y || {}),
+              ticks: {
+                ...(options.scales?.y?.ticks || {}),
+                font: {
+                  size: window.innerWidth < 640 ? 10 : 11,
+                }
+              }
+            }
+          }
+        }} />
+      </div>
+      <div className="mt-2 sm:mt-4 grid grid-cols-2 gap-2 sm:gap-4 text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
+        <div>
+          <div className="font-medium">Open</div>
+          <div className="mt-0.5 sm:mt-1">${firstPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+        </div>
+        <div>
+          <div className="font-medium">Close</div>
+          <div className="mt-0.5 sm:mt-1">${lastPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+        </div>
+        <div>
+          <div className="font-medium">Change</div>
+          <div className={`mt-0.5 sm:mt-1 ${isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+            {isPositive ? '+' : ''}{priceChange.toFixed(2)}
+          </div>
+        </div>
+        <div>
+          <div className="font-medium">Change %</div>
+          <div className={`mt-0.5 sm:mt-1 ${isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+            {isPositive ? '+' : ''}{percentChange.toFixed(2)}%
+          </div>
+        </div>
       </div>
     </div>
   )
