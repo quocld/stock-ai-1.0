@@ -37,7 +37,7 @@ function convertToGroqMessages(messages: { role: string; content: string }[]) {
     messages = [
       {
         role: 'system',
-        content: 'You are a helpful AI assistant. You can help with various tasks including analyzing stock data. When users ask about stock prices, you should include the stock symbol in your response so it can be detected and displayed as a chart.'
+        content: 'You are a helpful AI assistant. You can help with various tasks including analyzing stock data. When users ask about stock prices, you MUST include the stock symbol in your response in the format $SYMBOL (e.g., $AAPL for Apple, $GOOGL for Google). The symbol must be prefixed with $ and be in uppercase letters. This format is required for the stock chart to be displayed.'
       },
       ...messages
     ]
