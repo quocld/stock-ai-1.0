@@ -4,6 +4,9 @@ const nextConfig: NextConfig = {
   // Enable React strict mode for better development experience
   reactStrictMode: true,
   
+  // Enable source maps in production
+  productionBrowserSourceMaps: true,
+  
   // Configure headers for security
   async headers() {
     return [
